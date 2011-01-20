@@ -1,4 +1,4 @@
-(ns test.error.handler
+(ns error.test.handler
   [:use clojure.test error.handler])
 
 ;; a low level fn that can cause errors
@@ -17,33 +17,32 @@
     :retry #(error-prone (Math/abs (:number %)))}
    (error-prone n)))
 
-;;define handler fn yourself and call middle layer
-(testing "basic handler with manual metadata"
-  (is (= 42
-         (with-handlers :type [^{:type :NumberError} (constantly 42)]
-           (do-stuff -5)))))
-
-(testing "basic handler with recovery call"
-  (is (= 6
-         (with-handlers :type [^{:type :NumberError} (fn [e] (recover e :retry))]
-           (do-stuff -5)))))
-
-;;use macro to specify handlers, show that recoveries can be added at any level
 (def test-handlers
   [ (handle-type :NumberError [e] (recover e :return-zero)) ;;choose a predefined recovery
     (handle-type :OtherError [e] 0)
     (handle-type IllegalStateException [e] 201)])
 
-(testing "multiple handlers"
-  (is (thrown? IllegalArgumentException (with-handlers :type test-handlers
-                                          (do-stuff 105))))
-  (is (= 201 (with-handlers :type test-handlers 
-               (do-stuff 255))))
+(deftest error-handling-tests
+  (testing "basic handler with manual metadata"
+   (is (= 42
+          (with-handlers :type [^{:type :NumberError} (fn [_] 42)]
+            (do-stuff -5)))))
 
-  (is (= 0 (with-handlers :type test-handlers 
+  (testing "basic handler with handle-type macro and recovery call"
+    (is (= 6
+           (with-handlers :type [(handle-type :NumberError [e] (recover e :retry))]
+             (do-stuff -5)))))
+
+  (testing "multiple handlers"
+    (is (thrown? IllegalArgumentException (with-handlers :type test-handlers
+                                            (do-stuff 105))))
+    (is (= 201 (with-handlers :type test-handlers 
+                 (do-stuff 255))))
+
+    (is (= 0 (with-handlers :type test-handlers 
                (do-stuff 321)))))
 
-(testing "nested handlers"
-  (is (= 42 (with-handlers :type [(handle-type :OtherError [_] 42)]
-              (with-handlers :type [(handle-type :NumberError [e] (recover e :return-zero))]
-                (do-stuff 305))))))
+  (testing "nested handlers"
+    (is (= 42 (with-handlers :type [(handle-type :OtherError [_] 42)]
+                (with-handlers :type [(handle-type :NumberError [e] (recover e :return-zero))]
+                  (do-stuff 305)))))))
