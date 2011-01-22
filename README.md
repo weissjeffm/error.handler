@@ -1,4 +1,4 @@
-error.handler is a small error handling library for Clojure.  It is similar to clojure.contrib.condition, but adds a bit of functionality while taking away the need for AOT compilation.
+error.handler is a small error handling library for Clojure.  It is similar to [clojure.contrib.condition](http://richhickey.github.com/clojure-contrib/condition-api.html), but adds a bit of functionality while taking away the need for AOT compilation.
 
 What it intends to provide:
 ===========================
