@@ -25,24 +25,24 @@
 (deftest error-handling-tests
   (testing "basic handler with manual metadata"
    (is (= 42
-          (with-handlers :type [^{:type :NumberError} (fn [_] 42)]
+          (with-handlers [^{:type :NumberError} (fn [_] 42)]
             (do-stuff -5)))))
 
   (testing "basic handler with handle macro and recovery call"
     (is (= 6
-           (with-handlers :type [(handle :NumberError [e] (recover e :retry))]
+           (with-handlers [(handle :NumberError [e] (recover e :retry))]
              (do-stuff -5)))))
 
   (testing "multiple handlers"
     (is (thrown? IllegalArgumentException (with-handlers :type test-handlers
                                             (do-stuff 105))))
-    (is (= 201 (with-handlers :type test-handlers 
+    (is (= 201 (with-handlers test-handlers 
                  (do-stuff 255))))
 
-    (is (= 0 (with-handlers :type test-handlers 
+    (is (= 0 (with-handlers test-handlers 
                (do-stuff 321)))))
 
   (testing "nested handlers"
-    (is (= 42 (with-handlers :type [(handle :OtherError [_] 42)]
-                (with-handlers :type [(handle :NumberError [e] (recover e :return-zero))]
+    (is (= 42 (with-handlers [(handle :OtherError [_] 42)]
+                (with-handlers [(handle :NumberError [e] (recover e :return-zero))]
                   (do-stuff 305)))))))

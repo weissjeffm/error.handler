@@ -48,7 +48,7 @@
                         (format "Recovery %s needs to be a function with one argument, instead got: %s"
                                 recovery recoveryfn))))))
 
-(defmacro with-handlers "Runs code in an error handling environment.
+(defmacro with-handlers-dispatch "Runs code in an error handling environment.
 
   Executes body. If an error is raised (or an exception is thrown),
 the list of error handling functions is passed through the dispatch
@@ -84,6 +84,9 @@ recover will be the entire body of the handler."
                   (throw unhandled#) 
                   (chosen-handler# unwrapped#))))))))
 
+(defmacro with-handlers [hlist & body]
+  `(with-handlers-dispatch :type ~hlist ~@body))
+
 (defmacro add-recoveries "Executes body and attaches all the key/value
 pairs in m to any error that occurs.  An error handler further down
 the call stack can examine the data in the map.  Recovery functions
@@ -94,15 +97,14 @@ functions should take one argument - the error."
         (catch Throwable ne#
           (throw (rewrap ne# ~m)))))
 
-(defmacro handle [type arglist & body]
+(defmacro handle "Creates a handler that can be dispatched by :type." [type arglist & body]
   (if (not= (count arglist) 1) (throw (IllegalArgumentException.
                                     (str "Type handlers can only take one argument, got " (count arglist)))))
-  (let [errname (first arglist)]
-    `(with-meta
-       (fn ~arglist (do ~@body))
-       {:type ~type})))
+  `(with-meta
+     (fn ~arglist ~@body)
+     {:type ~type}))
 
-(defn expect "Handle an error of a given type with a no-op function."
+(defn ignore "Handle an error of a given type with a no-op function."
   [type]
   (handle type [_] nil))
 
