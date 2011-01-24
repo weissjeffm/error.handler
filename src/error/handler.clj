@@ -50,35 +50,39 @@
 
 (defmacro with-handlers "Runs code in an error handling environment.
 
-  Executes body, if an error is raised, pass it to each of the
-handlers in hlist.  Each handler should be a function that should take
-an error map as an argument, and returns one of the following:
+  Executes body. If an error is raised (or an exception is thrown),
+the list of error handling functions is passed through the dispatch
+function dispatch-fn to determine which handler will be selected.  The
+dispatch function will be called on the error map, and then on the
+metadata of each handler.  The return values of those calls will be
+compared using isa?, and the first handler to match the error will be
+called.  Java exceptions will be converted to error maps with the
+keys :msg and :type.
 
-  1) A value which will be returned as the value of the whole form
+   Each handler should be a function that should take
+an error map as an argument.
 
-  2) The original error, if the handler doesn't handle this kind of
-  error.
-
-The error map will have whatever keys it was created with,
-typically :msg will be the text of the error, and :type will be the
-type.
-
-Within the handler, you can also choose a pre-defined recovery by
-retrieving it from the error map, and calling it.  The recover
-function does this for you.  In most cases, the call to recover will
-be the entire body of the handler."
+Within the handler, you can also choose a pre-defined recovery
+function by retrieving it from the error map, and calling it.  The
+'recover' function does this for you.  In most cases, the call to
+recover will be the entire body of the handler."
   [dispatch-fn hlist & body]
-  `(binding [*handlers* (concat ~hlist *handlers*) ] ;chain handlers together
-     (try ~@body
-          (catch Throwable ne#
-            (let [unwrapped# (unwrap ne#)
-                  selected# (~dispatch-fn unwrapped#)
-                  chosen-handler# (first (filter #(isa? selected# (~dispatch-fn (meta %)))
-                                                  *handlers*))
-                  unhandled# (or (:exception unwrapped#) ne#)] ;if the original error was an exception, retrieve it to throw if it is not handled.
-              (if (nil? chosen-handler#)
-                (throw unhandled#) 
-                (chosen-handler# unwrapped#)))))))
+  `(do
+     (if-not (ifn? ~dispatch-fn)
+       (throw (IllegalArgumentException. "First argument to with-handlers must be a function.")))
+     (if-not (every? ifn? ~hlist)
+       (throw (IllegalArgumentException. "All handlers must be functions.")))
+     (binding [*handlers* (concat ~hlist *handlers*) ] ;chain handlers together
+       (try ~@body
+            (catch Throwable ne#
+              (let [unwrapped# (unwrap ne#)
+                    selected# (~dispatch-fn unwrapped#)
+                    chosen-handler# (first (filter #(isa? selected# (~dispatch-fn (meta %)))
+                                                   *handlers*))
+                    unhandled# (or (:exception unwrapped#) ne#)] ;if the original error was an exception, retrieve it to throw if it is not handled.
+                (if (nil? chosen-handler#)
+                  (throw unhandled#) 
+                  (chosen-handler# unwrapped#))))))))
 
 (defmacro add-recoveries "Executes body and attaches all the key/value
 pairs in m to any error that occurs.  An error handler further down
