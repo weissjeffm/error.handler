@@ -18,9 +18,9 @@
    (error-prone n)))
 
 (def test-handlers
-  [ (handle-type :NumberError [e] (recover e :return-zero)) ;;choose a predefined recovery
-    (handle-type :OtherError [e] 0)
-    (handle-type IllegalStateException [e] 201)])
+  [ (handle :NumberError [e] (recover e :return-zero)) ;;choose a predefined recovery
+    (handle :OtherError [e] 0)
+    (handle IllegalStateException [e] 201)])
 
 (deftest error-handling-tests
   (testing "basic handler with manual metadata"
@@ -28,9 +28,9 @@
           (with-handlers :type [^{:type :NumberError} (fn [_] 42)]
             (do-stuff -5)))))
 
-  (testing "basic handler with handle-type macro and recovery call"
+  (testing "basic handler with handle macro and recovery call"
     (is (= 6
-           (with-handlers :type [(handle-type :NumberError [e] (recover e :retry))]
+           (with-handlers :type [(handle :NumberError [e] (recover e :retry))]
              (do-stuff -5)))))
 
   (testing "multiple handlers"
@@ -43,6 +43,6 @@
                (do-stuff 321)))))
 
   (testing "nested handlers"
-    (is (= 42 (with-handlers :type [(handle-type :OtherError [_] 42)]
-                (with-handlers :type [(handle-type :NumberError [e] (recover e :return-zero))]
+    (is (= 42 (with-handlers :type [(handle :OtherError [_] 42)]
+                (with-handlers :type [(handle :NumberError [e] (recover e :return-zero))]
                   (do-stuff 305)))))))

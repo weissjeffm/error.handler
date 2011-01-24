@@ -90,7 +90,7 @@ functions should take one argument - the error."
         (catch Throwable ne#
           (throw (rewrap ne# ~m)))))
 
-(defmacro handle-type [type arglist & body]
+(defmacro handle [type arglist & body]
   (if (not= (count arglist) 1) (throw (IllegalArgumentException.
                                     (str "Type handlers can only take one argument, got " (count arglist)))))
   (let [errname (first arglist)]
@@ -100,7 +100,7 @@ functions should take one argument - the error."
 
 (defn expect "Handle an error of a given type with a no-op function."
   [type]
-  (handle-type type [_] nil))
+  (handle type [_] nil))
 
 
 
